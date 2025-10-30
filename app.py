@@ -206,7 +206,7 @@ def submit_form():
         data = request.json
         
         with file_lock:
-            # Save to local Excel
+            # Save to local Excel (CRITICAL - must succeed)
             init_submissions_file()
             wb = openpyxl.load_workbook(SUBMISSIONS_FILE)
             ws = wb.active
@@ -227,11 +227,17 @@ def submit_form():
             submission_number = ws.max_row - 1
             wb.save(SUBMISSIONS_FILE)
         
-        # Send email notification (async in background would be better)
-        send_email_notification(data, submission_number)
+        # Try to send email (non-blocking - failures won't stop submission)
+        try:
+            send_email_notification(data, submission_number)
+        except Exception as e:
+            print(f"Email failed (non-critical): {str(e)}")
         
-        # Save to Google Sheets
-        save_to_google_sheets(data, submission_number)
+        # Try to save to Google Sheets (non-blocking)
+        try:
+            save_to_google_sheets(data, submission_number)
+        except Exception as e:
+            print(f"Google Sheets failed (non-critical): {str(e)}")
         
         return jsonify({
             'success': True,
@@ -240,7 +246,9 @@ def submit_form():
         })
     
     except Exception as e:
-        print(f"Error: {str(e)}")
+        print(f"Critical error: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'success': False, 'message': str(e)}), 500
 
 @app.route('/download')
