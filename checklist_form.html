@@ -14,7 +14,7 @@
         
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #3B82F6 0%, #60A5FA 100%);
             min-height: 100vh;
             padding: 40px 20px;
         }
@@ -30,13 +30,13 @@
             border-radius: 16px 16px 0 0;
             box-shadow: 0 10px 40px rgba(0,0,0,0.1);
             text-align: center;
-            border-bottom: 4px solid #667eea;
+            border-bottom: 4px solid #3B82F6;
         }
         
         .logo-placeholder {
             width: 80px;
             height: 80px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #3B82F6 0%, #60A5FA 100%);
             border-radius: 20px;
             margin: 0 auto 20px;
             display: flex;
@@ -132,12 +132,12 @@
         
         .form-field input:focus {
             outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            border-color: #3B82F6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
         }
         
         .section-divider {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #3B82F6 0%, #60A5FA 100%);
             color: white;
             padding: 20px 40px;
             margin: 0;
@@ -182,7 +182,7 @@
         }
         
         .question-number {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #3B82F6 0%, #60A5FA 100%);
             color: white;
             min-width: 36px;
             height: 36px;
@@ -240,19 +240,19 @@
         }
         
         .radio-option input[type="radio"]:checked + .radio-label {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-color: #667eea;
+            background: linear-gradient(135deg, #3B82F6 0%, #60A5FA 100%);
+            border-color: #3B82F6;
             color: white;
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
         }
         
         .radio-label:hover {
-            border-color: #667eea;
+            border-color: #3B82F6;
             background: #f7fafc;
         }
         
         .radio-option input[type="radio"]:checked + .radio-label:hover {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #3B82F6 0%, #60A5FA 100%);
         }
         
         .remarks-field {
@@ -281,8 +281,8 @@
         
         textarea:focus {
             outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            border-color: #3B82F6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
         }
         
         .image-section {
@@ -305,7 +305,7 @@
         }
         
         .submit-button {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #3B82F6 0%, #60A5FA 100%);
             color: white;
             padding: 18px 60px;
             border: none;
@@ -314,12 +314,12 @@
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s;
-            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 4px 20px rgba(59, 130, 246, 0.4);
         }
         
         .submit-button:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 30px rgba(102, 126, 234, 0.5);
+            box-shadow: 0 6px 30px rgba(59, 130, 246, 0.5);
         }
         
         .submit-button:disabled {
@@ -367,19 +367,19 @@
             margin-top: 20px;
             padding: 14px 30px;
             background: white;
-            color: #667eea;
+            color: #3B82F6;
             text-decoration: none;
             border-radius: 10px;
-            border: 2px solid #667eea;
+            border: 2px solid #3B82F6;
             font-weight: 600;
             transition: all 0.2s;
         }
         
         .download-button:hover {
-            background: #667eea;
+            background: #3B82F6;
             color: white;
             transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
         }
         
         .progress-indicator {
@@ -388,9 +388,84 @@
             left: 0;
             width: 0%;
             height: 4px;
-            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(90deg, #3B82F6 0%, #60A5FA 100%);
             transition: width 0.3s;
             z-index: 1000;
+        }
+        
+        /* Thank You Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 9999;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .modal-content {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 50px 60px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            text-align: center;
+            max-width: 500px;
+            width: 90%;
+            animation: slideUp 0.4s ease;
+        }
+        
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -40%);
+            }
+            to {
+                opacity: 1;
+                transform: translate(-50%, -50%);
+            }
+        }
+        
+        .modal-icon {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #3B82F6 0%, #60A5FA 100%);
+            border-radius: 50%;
+            margin: 0 auto 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 50px;
+        }
+        
+        .modal-content h2 {
+            font-size: 32px;
+            color: #1a202c;
+            margin-bottom: 15px;
+        }
+        
+        .modal-content p {
+            font-size: 16px;
+            color: #4a5568;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+        
+        .redirect-text {
+            font-size: 14px;
+            color: #718096;
+            font-style: italic;
         }
         
         @media (max-width: 768px) {
@@ -432,11 +507,25 @@
             .radio-option {
                 max-width: 100%;
             }
+            
+            .modal-content {
+                padding: 40px 30px;
+            }
         }
     </style>
 </head>
 <body>
     <div class="progress-indicator" id="progressBar"></div>
+    
+    <!-- Thank You Modal -->
+    <div class="modal-overlay" id="thankYouModal">
+        <div class="modal-content">
+            <div class="modal-icon">✓</div>
+            <h2>Thank You!</h2>
+            <p>Your checklist has been submitted successfully.</p>
+            <p class="redirect-text">Redirecting to Universal Load Banks in <span id="countdown">5</span> seconds...</p>
+        </div>
+    </div>
     
     <div class="main-container">
         <div class="header-section">
@@ -2152,6 +2241,7 @@
             document.getElementById('progressBar').style.width = scrolled + '%';
         });
         
+        // Form submission
         document.getElementById('checklistForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
@@ -2188,21 +2278,31 @@
                 const result = await response.json();
                 
                 if (result.success) {
-                    alertBox.className = 'alert alert-success';
-                    alertBox.textContent = '✓ ' + result.message + ' Submission #' + result.submission_number;
-                    alertBox.style.display = 'block';
-                    this.reset();
-                    window.scrollTo({top: 0, behavior: 'smooth'});
+                    // Show thank you modal
+                    document.getElementById('thankYouModal').style.display = 'block';
                     
-                    setTimeout(() => {
-                        alertBox.style.display = 'none';
-                    }, 5000);
+                    // Countdown and redirect
+                    let seconds = 5;
+                    const countdownEl = document.getElementById('countdown');
+                    
+                    const countdown = setInterval(() => {
+                        seconds--;
+                        countdownEl.textContent = seconds;
+                        
+                        if (seconds <= 0) {
+                            clearInterval(countdown);
+                            window.location.href = 'https://www.universalloadbanks.com/';
+                        }
+                    }, 1000);
+                    
+                    // Reset form
+                    this.reset();
                 } else {
                     throw new Error(result.message);
                 }
             } catch (error) {
                 alertBox.className = 'alert alert-error';
-                alertBox.textContent = '✗ Error: ' + error.message;
+                alertBox.textContent = '✗ Error: ' + error.message + ' - Please try again or contact support.';
                 alertBox.style.display = 'block';
                 window.scrollTo({top: 0, behavior: 'smooth'});
             } finally {
