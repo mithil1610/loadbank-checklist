@@ -7,6 +7,8 @@ from threading import Lock, Thread
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.mime.base import MIMEBase
+from email import encoders
 import gspread
 from google.oauth2.service_account import Credentials
 import json
@@ -59,13 +61,13 @@ def init_submissions_file():
         wb.save(SUBMISSIONS_FILE)
 
 def send_email_notification(submission_data, submission_number):
-    """Send email notification on form submission"""
+    """Send email notification on form submission with Excel attachment"""
     if not ADMIN_EMAIL or not SMTP_USERNAME or not SMTP_PASSWORD:
         print("Email not configured - skipping notification")
         return False
     
     try:
-        msg = MIMEMultipart('alternative')
+        msg = MIMEMultipart('mixed')
         msg['Subject'] = f'New Load Bank Checklist Submission #{submission_number}'
         msg['From'] = SMTP_USERNAME
         msg['To'] = ADMIN_EMAIL
@@ -100,8 +102,12 @@ def send_email_notification(submission_data, submission_number):
                         <h3 style="color: #667eea; margin-top: 25px;">Summary</h3>
                         <p style="background: #e8f4f8; padding: 15px; border-radius: 5px; border-left: 4px solid #667eea;">
                             A new load bank inspection checklist has been submitted. 
-                            The complete data has been saved to your Google Sheet and local Excel file.
+                            The complete data has been saved to your Google Sheet and the Excel file is attached to this email.
                         </p>
+                        
+                        <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin-top: 20px; border-radius: 5px;">
+                            <strong>📎 Attachment:</strong> The updated Excel file with all submissions is attached below.
+                        </div>
                         
                         <div style="margin-top: 25px; text-align: center;">
                             <p style="color: #666; font-size: 12px;">
@@ -114,18 +120,38 @@ def send_email_notification(submission_data, submission_number):
         </html>
         """
         
+        # Attach HTML body
         msg.attach(MIMEText(html, 'html'))
         
+        # Attach Excel file
+        if os.path.exists(SUBMISSIONS_FILE):
+            try:
+                with open(SUBMISSIONS_FILE, 'rb') as f:
+                    part = MIMEBase('application', 'vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+                    part.set_payload(f.read())
+                    encoders.encode_base64(part)
+                    
+                    filename = f'checklist_submissions_{datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx'
+                    part.add_header('Content-Disposition', f'attachment; filename="{filename}"')
+                    msg.attach(part)
+                    
+                    print(f"✓ Excel file attached: {filename}")
+            except Exception as attach_error:
+                print(f"✗ Could not attach Excel file: {str(attach_error)}")
+        
+        # Send email
         with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
             server.starttls()
             server.login(SMTP_USERNAME, SMTP_PASSWORD)
             server.send_message(msg)
         
-        print(f"✓ Email notification sent to {ADMIN_EMAIL}")
+        print(f"✓ Email notification sent to {ADMIN_EMAIL} with attachment")
         return True
         
     except Exception as e:
         print(f"✗ Email error: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return False
 
 def save_to_google_sheets(submission_data, submission_number):
