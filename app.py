@@ -155,7 +155,7 @@ def send_email_notification(submission_data, submission_number):
         return False
 
 def save_to_google_sheets(submission_data, submission_number):
-    """Save submission to Google Sheets"""
+    """Save submission to Google Sheets (sheet must exist and be shared with service account)"""
     if not GOOGLE_SHEETS_CREDS:
         print("Google Sheets not configured - skipping")
         return False
@@ -172,34 +172,50 @@ def save_to_google_sheets(submission_data, submission_number):
         creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
         client = gspread.authorize(creds)
         
-        # Open or create spreadsheet
+        # Open existing spreadsheet (must be manually created and shared)
         try:
             spreadsheet = client.open(GOOGLE_SHEET_NAME)
+            print(f"✓ Opened spreadsheet: {GOOGLE_SHEET_NAME}")
         except gspread.SpreadsheetNotFound:
-            spreadsheet = client.create(GOOGLE_SHEET_NAME)
-            if ADMIN_EMAIL:
-                spreadsheet.share(ADMIN_EMAIL, perm_type='user', role='writer')
+            service_account_email = creds_dict.get('client_email', 'unknown')
+            print(f"✗ ERROR: Spreadsheet '{GOOGLE_SHEET_NAME}' not found!")
+            print(f"   Please create it in Google Drive and share with: {service_account_email}")
+            return False
+        except Exception as open_error:
+            print(f"✗ Error opening spreadsheet: {str(open_error)}")
+            return False
         
         # Get first worksheet
         try:
             worksheet = spreadsheet.sheet1
-        except:
-            worksheet = spreadsheet.add_worksheet(title="Submissions", rows="1000", cols="150")
+        except Exception as ws_error:
+            print(f"✗ Error accessing worksheet: {str(ws_error)}")
+            return False
         
-        # Check if headers exist
-        if worksheet.row_count == 0 or not worksheet.row_values(1):
-            headers = ['Submission #', 'Submission Date', 'Submission Time', 'Serial Number', 'Checklist Date']
-            for i in range(1, 72):
-                headers.append(f'Q{i}')
-                headers.append(f'Q{i}_Remarks')
-            worksheet.append_row(headers)
+        # Check if headers exist and add them if needed
+        try:
+            existing_headers = worksheet.row_values(1) if worksheet.row_count > 0 else []
             
-            # Format header row
-            worksheet.format('A1:EW1', {
-                'backgroundColor': {'red': 0.4, 'green': 0.49, 'blue': 0.92},
-                'textFormat': {'bold': True, 'foregroundColor': {'red': 1, 'green': 1, 'blue': 1}},
-                'horizontalAlignment': 'CENTER'
-            })
+            if not existing_headers:
+                headers = ['Submission #', 'Submission Date', 'Submission Time', 'Serial Number', 'Checklist Date']
+                for i in range(1, 72):
+                    headers.append(f'Q{i}')
+                    headers.append(f'Q{i}_Remarks')
+                worksheet.append_row(headers)
+                print("✓ Headers added to spreadsheet")
+                
+                # Format header row
+                try:
+                    worksheet.format('A1:EW1', {
+                        'backgroundColor': {'red': 0.4, 'green': 0.49, 'blue': 0.92},
+                        'textFormat': {'bold': True, 'foregroundColor': {'red': 1, 'green': 1, 'blue': 1}},
+                        'horizontalAlignment': 'CENTER'
+                    })
+                    print("✓ Header formatting applied")
+                except Exception as format_error:
+                    print(f"⚠ Could not format headers: {str(format_error)}")
+        except Exception as header_error:
+            print(f"⚠ Header error: {str(header_error)}")
         
         # Prepare row data
         now = datetime.now()
@@ -211,16 +227,25 @@ def save_to_google_sheets(submission_data, submission_number):
             submission_data.get('date', '')
         ]
         
+        # Add all questions and remarks
         for i in range(1, 72):
             row_data.append(submission_data.get(f'q{i}', ''))
             row_data.append(submission_data.get(f'remarks{i}', ''))
         
-        # Append row
+        # Append row to spreadsheet
         worksheet.append_row(row_data)
         
-        print(f"✓ Data saved to Google Sheets: {GOOGLE_SHEET_NAME}")
+        print(f"✓ Data saved to Google Sheets: {GOOGLE_SHEET_NAME} (Submission #{submission_number})")
         return True
         
+    except gspread.exceptions.APIError as api_error:
+        print(f"✗ Google Sheets API error: {str(api_error)}")
+        if hasattr(api_error, 'response'):
+            print(f"   Response: {api_error.response}")
+        return False
+    except json.JSONDecodeError as json_error:
+        print(f"✗ Invalid Google Sheets credentials JSON: {str(json_error)}")
+        return False
     except Exception as e:
         print(f"✗ Google Sheets error: {str(e)}")
         import traceback
