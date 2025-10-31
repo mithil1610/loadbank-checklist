@@ -3,7 +3,7 @@ from datetime import datetime
 import openpyxl
 from openpyxl.styles import Font, Alignment, PatternFill
 import os
-from threading import Lock
+from threading import Lock, Thread
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -151,7 +151,8 @@ def save_to_google_sheets(submission_data, submission_number):
             spreadsheet = client.open(GOOGLE_SHEET_NAME)
         except gspread.SpreadsheetNotFound:
             spreadsheet = client.create(GOOGLE_SHEET_NAME)
-            spreadsheet.share(ADMIN_EMAIL, perm_type='user', role='writer')
+            if ADMIN_EMAIL:
+                spreadsheet.share(ADMIN_EMAIL, perm_type='user', role='writer')
         
         # Get first worksheet
         try:
@@ -196,6 +197,8 @@ def save_to_google_sheets(submission_data, submission_number):
         
     except Exception as e:
         print(f"✗ Google Sheets error: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return False
 
 @app.route('/')
@@ -207,54 +210,84 @@ def submit_form():
     try:
         data = request.json
         
+        if not data:
+            return jsonify({
+                'success': False,
+                'message': 'No data received'
+            }), 400
+        
+        submission_number = None
+        
+        # Initialize file once before lock
+        init_submissions_file()
+        
+        # Critical operation: Save to local Excel
         with file_lock:
-            # Save to local Excel (CRITICAL - must succeed)
-            init_submissions_file()
-            wb = openpyxl.load_workbook(SUBMISSIONS_FILE)
-            ws = wb.active
-            
-            now = datetime.now()
-            row_data = [
-                now.strftime('%Y-%m-%d'),
-                now.strftime('%H:%M:%S'),
-                data.get('serialNumber', ''),
-                data.get('date', '')
-            ]
-            
-            for i in range(1, 72):
-                row_data.append(data.get(f'q{i}', ''))
-                row_data.append(data.get(f'remarks{i}', ''))
-            
-            ws.append(row_data)
-            submission_number = ws.max_row - 1
-            wb.save(SUBMISSIONS_FILE)
+            try:
+                wb = openpyxl.load_workbook(SUBMISSIONS_FILE)
+                ws = wb.active
+                
+                now = datetime.now()
+                row_data = [
+                    now.strftime('%Y-%m-%d'),
+                    now.strftime('%H:%M:%S'),
+                    data.get('serialNumber', ''),
+                    data.get('date', '')
+                ]
+                
+                for i in range(1, 72):
+                    row_data.append(data.get(f'q{i}', ''))
+                    row_data.append(data.get(f'remarks{i}', ''))
+                
+                ws.append(row_data)
+                submission_number = ws.max_row - 1
+                wb.save(SUBMISSIONS_FILE)
+                
+                print(f"✓ Submission #{submission_number} saved to Excel")
+                
+            except Exception as excel_error:
+                print(f"✗ Excel save error: {str(excel_error)}")
+                import traceback
+                traceback.print_exc()
+                raise
         
-        # Try to send email (non-blocking - failures won't stop submission)
-        try:
-            send_email_notification(data, submission_number)
-        except Exception as e:
-            print(f"Email failed (non-critical): {str(e)}")
+        # Background tasks - non-blocking
+        def background_tasks():
+            """Run email and Google Sheets operations in background"""
+            try:
+                send_email_notification(data, submission_number)
+            except Exception as e:
+                print(f"Background email error: {str(e)}")
+            
+            try:
+                save_to_google_sheets(data, submission_number)
+            except Exception as e:
+                print(f"Background Google Sheets error: {str(e)}")
         
-        # Try to save to Google Sheets (non-blocking)
-        try:
-            save_to_google_sheets(data, submission_number)
-        except Exception as e:
-            print(f"Google Sheets failed (non-critical): {str(e)}")
+        # Start background thread for non-critical operations
+        if submission_number:
+            thread = Thread(target=background_tasks, daemon=True)
+            thread.start()
         
+        # Return success immediately
         return jsonify({
             'success': True,
             'message': 'Checklist submitted successfully!',
             'submission_number': submission_number
-        })
+        }), 200
     
     except Exception as e:
-        print(f"Critical error: {str(e)}")
+        print(f"✗ Critical error in /submit: {str(e)}")
         import traceback
         traceback.print_exc()
-        return jsonify({'success': False, 'message': str(e)}), 500
+        return jsonify({
+            'success': False, 
+            'message': f'Submission failed: {str(e)}'
+        }), 500
 
 @app.route('/download')
 def download_submissions():
+    """Download the Excel file with all submissions"""
     if os.path.exists(SUBMISSIONS_FILE):
         return send_file(
             SUBMISSIONS_FILE,
@@ -262,18 +295,27 @@ def download_submissions():
             download_name=f'checklist_submissions_{datetime.now().strftime("%Y%m%d")}.xlsx'
         )
     else:
-        return "No submissions file found", 404
+        return jsonify({'error': 'No submissions file found'}), 404
 
 @app.route('/health')
 def health():
+    """Health check endpoint"""
     status = {
         'status': 'healthy',
+        'timestamp': datetime.now().isoformat(),
         'email_configured': bool(ADMIN_EMAIL and SMTP_USERNAME and SMTP_PASSWORD),
-        'google_sheets_configured': bool(GOOGLE_SHEETS_CREDS)
+        'google_sheets_configured': bool(GOOGLE_SHEETS_CREDS),
+        'excel_file_exists': os.path.exists(SUBMISSIONS_FILE)
     }
     return jsonify(status)
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    print("DEBUG EMAIL CONFIG:", ADMIN_EMAIL, SMTP_USERNAME, bool(SMTP_PASSWORD))
+    print("="*50)
+    print("Load Bank Checklist System Starting...")
+    print("="*50)
+    print(f"Port: {port}")
+    print(f"Email configured: {bool(ADMIN_EMAIL and SMTP_USERNAME and SMTP_PASSWORD)}")
+    print(f"Google Sheets configured: {bool(GOOGLE_SHEETS_CREDS)}")
+    print("="*50)
     app.run(host='0.0.0.0', port=port, debug=False)
