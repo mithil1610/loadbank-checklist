@@ -10,6 +10,8 @@ from email.mime.multipart import MIMEMultipart
 import gspread
 from google.oauth2.service_account import Credentials
 import json
+from dotenv import load_dotenv
+load_dotenv()
 
 app = Flask(__name__)
 
@@ -273,4 +275,5 @@ def health():
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
+    print("DEBUG EMAIL CONFIG:", ADMIN_EMAIL, SMTP_USERNAME, bool(SMTP_PASSWORD))
     app.run(host='0.0.0.0', port=port, debug=False)
