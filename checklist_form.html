@@ -34,8 +34,8 @@
         }
         
         .logo-placeholder {
-            width: 80px;
-            height: 80px;
+            width: 100px;
+            height: 90px;
             background: linear-gradient(135deg, #3B82F6 0%, #60A5FA 100%);
             border-radius: 20px;
             margin: 0 auto 20px;
@@ -2241,12 +2241,15 @@
             document.getElementById('progressBar').style.width = scrolled + '%';
         });
         
-        // Form submission
+        // Form submission with improved error handling
         document.getElementById('checklistForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
             const submitBtn = document.getElementById('submitBtn');
             const alertBox = document.getElementById('alertBox');
+            
+            // Hide any previous alerts
+            alertBox.style.display = 'none';
             
             submitBtn.disabled = true;
             submitBtn.textContent = 'Submitting...';
@@ -2254,6 +2257,7 @@
             const formData = {};
             const formElements = this.elements;
             
+            // Collect form data
             for (let element of formElements) {
                 if (element.name) {
                     if (element.type === 'radio') {
@@ -2266,16 +2270,43 @@
                 }
             }
             
+            // Create abort controller for timeout
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 90000); // 90 second timeout
+            
             try {
                 const response = await fetch('/submit', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify(formData)
+                    body: JSON.stringify(formData),
+                    signal: controller.signal
                 });
                 
-                const result = await response.json();
+                clearTimeout(timeoutId);
+                
+                // Check if response is ok
+                if (!response.ok) {
+                    throw new Error(`Server error (${response.status}): ${response.statusText}`);
+                }
+                
+                // Get response text first to check if it's empty
+                const responseText = await response.text();
+                
+                if (!responseText) {
+                    throw new Error('Empty response from server - please try again');
+                }
+                
+                // Try to parse JSON
+                let result;
+                try {
+                    result = JSON.parse(responseText);
+                } catch (parseError) {
+                    console.error('JSON parse error:', parseError);
+                    console.error('Response text:', responseText);
+                    throw new Error('Invalid response from server - please try again');
+                }
                 
                 if (result.success) {
                     // Show thank you modal
@@ -2298,18 +2329,45 @@
                     // Reset form
                     this.reset();
                 } else {
-                    throw new Error(result.message);
+                    throw new Error(result.message || 'Submission failed - please try again');
                 }
             } catch (error) {
+                console.error('Submit error:', error);
+                
+                let errorMessage = 'Unknown error occurred';
+                
+                if (error.name === 'AbortError') {
+                    errorMessage = 'Request timeout - the server took too long to respond. Please try again.';
+                } else if (error.message) {
+                    errorMessage = error.message;
+                }
+                
                 alertBox.className = 'alert alert-error';
-                alertBox.textContent = '✗ Error: ' + error.message + ' - Please try again or contact support.';
+                alertBox.innerHTML = `
+                    <strong>✗ Submission Error</strong><br>
+                    ${errorMessage}<br>
+                    <small>If this persists, please contact support.</small>
+                `;
                 alertBox.style.display = 'block';
+                
+                // Scroll to top to show error
                 window.scrollTo({top: 0, behavior: 'smooth'});
             } finally {
+                clearTimeout(timeoutId);
                 submitBtn.disabled = false;
                 submitBtn.textContent = 'Submit Checklist';
             }
         });
+        
+        // Optional: Auto-hide success alerts after 5 seconds
+        function autoHideAlert() {
+            const alertBox = document.getElementById('alertBox');
+            if (alertBox && alertBox.classList.contains('alert-success')) {
+                setTimeout(() => {
+                    alertBox.style.display = 'none';
+                }, 5000);
+            }
+        }
     </script>
 </body>
 </html>
